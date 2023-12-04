@@ -1,7 +1,5 @@
 use std::cmp::Ordering;
-use std::fs::File;
-use std::io::{self, BufRead};
-use std::path::Path;
+use utils::file::read_lines;
 
 fn main() {
     let mut total = 0;
@@ -88,16 +86,6 @@ fn get_digit_from_line(
     }
 
     return digit;
-}
-
-// The output is wrapped in a Result to allow matching on errors
-// Returns an Iterator to the Reader of the lines of the file.
-fn read_lines<P>(filename: P) -> io::Result<io::Lines<io::BufReader<File>>>
-where
-    P: AsRef<Path>,
-{
-    let file = File::open(filename)?;
-    Ok(io::BufReader::new(file).lines())
 }
 
 fn find_numeric(str: &String) -> Option<usize> {
