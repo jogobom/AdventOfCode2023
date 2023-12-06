@@ -1,13 +1,27 @@
 use crate::cell::Cell;
 use crate::coord::Coord;
+use crate::part_number::PartNumber;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Default)]
 pub struct Grid {
     pub cells: Vec<Cell>,
 }
 
 impl Grid {
-    pub fn from_lines(lines: Vec<String>) -> Grid {
+    pub fn valid_part_number(&self, p: &PartNumber) -> bool {
+        let mut result = false;
+        for cell in p.cells.iter() {
+            let neighbours = self.get_neighbours(&cell);
+            for n in neighbours {
+                if !n.value.is_numeric() && n.value != '.' {
+                    result = true;
+                }
+            }
+        }
+        result
+    }
+
+    pub fn from_lines(lines: &Vec<&str>) -> Grid {
         let mut cells = vec![];
         let mut x = 0;
         let mut y = 0;
@@ -25,21 +39,55 @@ impl Grid {
         Grid { cells }
     }
 
-    pub fn get_neighbours(&self, cell: Cell) -> Vec<&Cell> {
+    pub fn get_neighbours(&self, cell: &Cell) -> Vec<&Cell> {
         self.cells
             .iter()
-            .filter(|c| c.coord.adjacent(&cell.coord))
+            .filter(|c| cell.coord.adjacent(&c.coord))
             .collect()
     }
+}
+#[test]
+fn test_check_part_number() {
+    let example_grid = Grid {
+        cells: vec![
+            Cell {
+                value: '1',
+                coord: Coord { x: 0, y: 0 },
+            },
+            Cell {
+                value: '+',
+                coord: Coord { x: 0, y: 1 },
+            },
+        ],
+    };
+
+    assert_eq!(
+        example_grid.valid_part_number(&&PartNumber {
+            value: 1,
+            cells: vec![Cell {
+                value: '1',
+                coord: Coord { x: 0, y: 0 },
+            }],
+        }),
+        true
+    );
+
+    assert_eq!(
+        example_grid.valid_part_number(&&PartNumber {
+            value: 1,
+            cells: vec![Cell {
+                value: '1',
+                coord: Coord { x: 2, y: 2 },
+            }],
+        }),
+        false
+    )
 }
 
 #[test]
 fn test_empty_grid_neighbours() {
     assert_eq!(
-        Grid { cells: Vec::new() }.get_neighbours(Cell {
-            value: ' ',
-            coord: Coord { x: 0, y: 0 }
-        }),
+        Grid { cells: Vec::new() }.get_neighbours(&Default::default()),
         Vec::<&Cell>::new()
     )
 }
@@ -48,15 +96,9 @@ fn test_empty_grid_neighbours() {
 fn test_one_cell_neighbours() {
     assert_eq!(
         Grid {
-            cells: vec![Cell {
-                value: ' ',
-                coord: Coord { x: 0, y: 0 }
-            }]
+            cells: vec![Default::default()]
         }
-        .get_neighbours(Cell {
-            value: ' ',
-            coord: Coord { x: 0, y: 0 }
-        }),
+        .get_neighbours(&Default::default()),
         Vec::<&Cell>::new()
     )
 }
@@ -76,7 +118,7 @@ fn test_first_cell_right_neighbour() {
                 }
             ]
         }
-        .get_neighbours(Cell {
+        .get_neighbours(&Cell {
             value: 'a',
             coord: Coord { x: 0, y: 0 }
         }),
@@ -102,7 +144,7 @@ fn test_first_cell_left_neighbour() {
                 }
             ]
         }
-        .get_neighbours(Cell {
+        .get_neighbours(&Cell {
             value: 'b',
             coord: Coord { x: 1, y: 0 }
         }),
@@ -127,7 +169,7 @@ fn test_first_cell_upper_neighbour() {
                 }
             ]
         }
-        .get_neighbours(Cell {
+        .get_neighbours(&Cell {
             value: 'a',
             coord: Coord { x: 0, y: 1 }
         }),
@@ -152,7 +194,7 @@ fn test_first_cell_lower_neighbour() {
                 }
             ]
         }
-        .get_neighbours(Cell {
+        .get_neighbours(&Cell {
             value: 'a',
             coord: Coord { x: 0, y: 0 }
         }),
@@ -165,17 +207,17 @@ fn test_first_cell_lower_neighbour() {
 
 #[test]
 fn test_empty_grid() {
-    assert_eq!(Grid::from_lines(vec![]), Grid { cells: vec![] });
+    assert_eq!(Grid::from_lines(&vec![]), Grid { cells: vec![] });
 }
 
 #[test]
 fn test_single_cell() {
     assert_eq!(
-        Grid::from_lines(vec!["5".to_string()]),
+        Grid::from_lines(&vec!["5"]),
         Grid {
             cells: vec![Cell {
                 value: '5',
-                coord: Coord { x: 0, y: 0 }
+                coord: Default::default()
             }]
         }
     );
@@ -184,7 +226,7 @@ fn test_single_cell() {
 #[test]
 fn test_single_line() {
     assert_eq!(
-        Grid::from_lines(vec!["54".to_string()]),
+        Grid::from_lines(&vec!["54"]),
         Grid {
             cells: vec![
                 Cell {
@@ -203,7 +245,7 @@ fn test_single_line() {
 #[test]
 fn test_multiple_lines() {
     assert_eq!(
-        Grid::from_lines(vec!["54".to_string(), "32".to_string()]),
+        Grid::from_lines(&vec!["54", "32"]),
         Grid {
             cells: vec![
                 Cell {
@@ -224,5 +266,53 @@ fn test_multiple_lines() {
                 }
             ]
         }
+    );
+}
+
+#[test]
+fn test_diagonal_neighbours() {
+    assert_eq!(
+        Grid {
+            cells: vec![
+                Cell {
+                    value: 'a',
+                    coord: Coord { x: 0, y: 0 }
+                },
+                Cell {
+                    value: 'b',
+                    coord: Coord { x: 1, y: 1 }
+                }
+            ]
+        }
+        .get_neighbours(&Cell {
+            value: 'a',
+            coord: Coord { x: 0, y: 0 }
+        }),
+        vec![&Cell {
+            value: 'b',
+            coord: Coord { x: 1, y: 1 }
+        }]
+    );
+    assert_eq!(
+        Grid {
+            cells: vec![
+                Cell {
+                    value: 'a',
+                    coord: Coord { x: 1, y: 1 }
+                },
+                Cell {
+                    value: 'b',
+                    coord: Coord { x: 0, y: 0 }
+                }
+            ]
+        }
+        .get_neighbours(&Cell {
+            value: 'a',
+            coord: Coord { x: 1, y: 1 }
+        }),
+        vec![&Cell {
+            value: 'b',
+            coord: Coord { x: 0, y: 0 }
+        }]
     );
 }
