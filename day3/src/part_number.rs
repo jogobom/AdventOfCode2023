@@ -3,7 +3,7 @@ use crate::coord::Coord;
 
 #[derive(Debug, PartialEq, Default)]
 pub struct PartNumber {
-    pub value: u32,
+    pub value: u64,
     pub cells: Vec<Cell>,
 }
 
@@ -50,7 +50,7 @@ impl PartNumber {
             .iter()
             .map(|c| c.value)
             .collect::<String>()
-            .parse::<u32>()
+            .parse::<u64>()
             .unwrap();
         let new_part_number = PartNumber {
             value,

@@ -1,9 +1,11 @@
+use crate::gear::Gear;
 use crate::grid::Grid;
 use crate::part_number::PartNumber;
 use utils::file::read_lines;
 
 mod cell;
 mod coord;
+mod gear;
 mod grid;
 mod part_number;
 
@@ -22,16 +24,26 @@ fn main() {
     let grid = Grid::from_lines(&borrowed_grid_lines);
     let potential_part_numbers = PartNumber::from_lines(&borrowed_grid_lines);
 
-    let mut values = vec![];
-    let mut total = 0;
-
+    let mut part_numbers = vec![];
+    let mut total_of_part_numbers = 0;
     for part_number in potential_part_numbers {
         if grid.valid_part_number(&part_number) {
-            values.push(part_number.value);
-            total += part_number.value
+            total_of_part_numbers += part_number.value;
+            part_numbers.push(part_number)
         }
     }
 
-    println!("Valid part numbers: {:?}", values);
-    println!("Total is {:?}", total)
+    println!("Valid part numbers: {:?}", part_numbers);
+    println!("Total is {:?}", total_of_part_numbers);
+
+    let potential_gears = Gear::from_lines(&borrowed_grid_lines);
+
+    let mut total_of_gear_ratios = 0;
+    for potential_gear in potential_gears {
+        if let Some(gear) = grid.get_gear(&potential_gear, &part_numbers) {
+            total_of_gear_ratios += gear.ratio
+        }
+    }
+
+    println!("Total gear ratio is {:?}", total_of_gear_ratios)
 }

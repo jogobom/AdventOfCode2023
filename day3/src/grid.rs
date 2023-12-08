@@ -1,5 +1,6 @@
 use crate::cell::Cell;
 use crate::coord::Coord;
+use crate::gear::Gear;
 use crate::part_number::PartNumber;
 
 #[derive(Debug, PartialEq, Default)]
@@ -19,6 +20,28 @@ impl Grid {
             }
         }
         result
+    }
+
+    pub fn get_gear(&self, c: &Cell, part_numbers: &Vec<PartNumber>) -> Option<Gear> {
+        let mut adjacent_part_numbers = 0;
+        let mut gear_ratio = 1;
+
+        for part_number in part_numbers {
+            for cell in part_number.cells.iter() {
+                if cell.coord.adjacent(&c.coord) {
+                    adjacent_part_numbers += 1;
+                    gear_ratio *= part_number.value;
+                    break;
+                }
+            }
+        }
+        if adjacent_part_numbers == 2 {
+            return Some(Gear {
+                ratio: gear_ratio,
+                coord: c.coord,
+            });
+        }
+        None
     }
 
     pub fn from_lines(lines: &Vec<&str>) -> Grid {
