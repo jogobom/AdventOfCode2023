@@ -1,3 +1,7 @@
+use std::ops::Range;
+
+use rayon::prelude::*;
+
 use utils::file::read_lines;
 
 use crate::map::Map;
@@ -7,12 +11,11 @@ mod map;
 fn main() {
     let mut input_lines = read_lines("input").expect("Could not read input file");
 
-    let seeds = parse_seeds(
-        input_lines
-            .next()
-            .expect("First line of input did not match expectations")
-            .unwrap(),
-    );
+    let strings = input_lines
+        .next()
+        .expect("First line of input did not match expectations")
+        .unwrap();
+    let seeds = create_ranges(parse_seeds(strings));
     input_lines.next();
 
     let mut maps = vec![];
@@ -29,15 +32,9 @@ fn main() {
         maps.push(Map::from_lines(next_map));
     }
 
-    let processed_seeds = seeds
-        .iter()
-        .map(|s| run_seed(vec![*s], &maps))
-        .collect::<Vec<Vec<i64>>>();
-    println!("processed seeds: {:?}", processed_seeds);
-
-    let destinations = processed_seeds
-        .iter()
-        .map(|p| *p.last().unwrap())
+    let destinations = seeds
+        .par_iter()
+        .map(|s| run_seeds(s.clone(), &maps))
         .collect::<Vec<i64>>();
     println!("destinations: {:?}", destinations);
 
@@ -52,9 +49,42 @@ fn parse_seeds(seeds_line: String) -> Vec<i64> {
         .collect()
 }
 
-fn run_seed(seed_journey: Vec<i64>, maps: &Vec<Map>) -> Vec<i64> {
-    maps.iter().fold(seed_journey, |acc, m| {
-        let last_seed = acc.last().expect("Didn't expect zero elements").clone();
-        [acc, vec![m.src_to_dst(last_seed)]].concat()
-    })
+fn run_seeds(seeds: Range<i64>, maps: &Vec<Map>) -> i64 {
+    let mut min_seed = (0, i64::MAX);
+
+    for seed in seeds {
+        let seed_journey = run_seed(seed, &maps);
+        let seed_destination = seed_journey
+            .last()
+            .expect("Didn't expect a zero length journey!");
+        if *seed_destination < min_seed.1 {
+            min_seed = (seed, *seed_destination);
+        }
+    }
+    min_seed.1
+}
+
+fn run_seed(seed: i64, maps: &Vec<Map>) -> Vec<i64> {
+    let mut seed_journey = vec![seed; maps.len() + 1];
+    for map in maps.iter().enumerate() {
+        seed_journey[map.0 + 1] = map.1.src_to_dst(seed_journey[map.0]);
+    }
+    seed_journey
+}
+
+fn create_ranges(input: Vec<i64>) -> Vec<Range<i64>> {
+    if input.len() % 2 != 0 {
+        panic!("Input vector must have an even number of elements.");
+    }
+
+    let mut ranges = Vec::new();
+    let mut iter = input.iter();
+
+    while let Some(&start) = iter.next() {
+        if let Some(&len) = iter.next() {
+            ranges.push(start..start + len);
+        }
+    }
+
+    ranges
 }
